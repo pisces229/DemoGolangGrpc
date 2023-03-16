@@ -1,0 +1,9 @@
+syntax = "proto3";
+option go_package = ".;pb";
+package group;
+import "group/message.proto";
+
+service Group {
+  rpc Do (GroupRequest) returns (GroupResponse) {}
+}
+

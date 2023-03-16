@@ -1,0 +1,26 @@
+syntax = "proto3";
+option go_package = ".;pb";
+package runner;
+import "google/api/annotations.proto";
+
+service Runner {
+  rpc RunGet (RunnerRequest) returns (RunnerResponse) {
+    option (google.api.http) = {
+      get: "/api/Runner/RunGet/{name}"
+    };
+  }
+  rpc RunPost (RunnerRequest) returns (RunnerResponse) {
+    option (google.api.http) = {
+      post: "/api/Runner/RunPost"
+      body: "*"
+    };
+  }
+}
+
+message RunnerRequest {
+  string name = 1;
+}
+
+message RunnerResponse {
+  string message = 1;
+}
