@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
 	"io"
 	"log"
 	"net/http"
@@ -43,7 +44,9 @@ func doGrpcRunGet() {
 	defer conn.Close()
 	client := pb.NewRunnerClient(conn)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	md := metadata.Pairs("key", "value")
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 	response, err := client.RunGet(ctx, &pb.RunnerRequest{Name: "Golang"})
 	if err != nil {
@@ -86,10 +89,17 @@ func doHttpRunGet() {
 	//}
 	//resource := "http://localhost:8090/api/Runner/RunGet/Golang"
 	resource := "https://localhost:8090/api/Runner/RunGet/Golang"
+	request, err := http.NewRequest("GET", resource, nil)
+	if err != nil {
+		log.Fatalf("NewRequest: %v", err)
+	}
+	// HTTP headers that start with 'Grpc-Metadata-' are mapped to gRPC metadata after removing prefix 'Grpc-Metadata-'.
+	request.Header.Add("Grpc-Metadata-Key", "value")
 	client := &http.Client{
 		//Transport: transport,
 	}
-	resp, err := client.Get(resource)
+	resp, err := client.Do(request)
+	//resp, err := client.Get(resource)
 	if err != nil {
 		log.Fatalf("Do fail: %v", err)
 	}

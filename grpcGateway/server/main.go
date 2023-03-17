@@ -6,6 +6,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
 	"log"
 	"net"
 	"net/http"
@@ -16,6 +17,12 @@ type server struct {
 }
 
 func (s *server) RunGet(ctx context.Context, request *pb.RunnerRequest) (*pb.RunnerResponse, error) {
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		log.Println(md)
+		if value, ok := md["key"]; ok {
+			log.Println(value)
+		}
+	}
 	return &pb.RunnerResponse{Message: "RunGet:[" + request.Name + "]"}, nil
 }
 

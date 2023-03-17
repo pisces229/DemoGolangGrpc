@@ -1,0 +1,15 @@
+syntax = "proto3";
+option go_package = ".;pb";
+package runner;
+
+service Runner {
+  rpc Run (RunnerRequest) returns (RunnerResponse) {}
+}
+
+message RunnerRequest {
+  string name = 1;
+}
+
+message RunnerResponse {
+  string message = 1;
+}

@@ -1,7 +1,8 @@
-## Generated Code
+## grpc server
+
+[Generated Code]
 
 ```
-
 protoc `
 --go_out=:. `
 --go_opt=paths=source_relative `
@@ -10,5 +11,4 @@ protoc `
 --grpc-gateway_out=logtostderr=true:. `
 --grpc-gateway_opt=paths=source_relative `
 runner.proto group/*.proto
-
 ```

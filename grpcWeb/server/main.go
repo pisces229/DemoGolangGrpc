@@ -2,33 +2,28 @@ package main
 
 import (
 	"context"
-	runnerPb "demo.golang.grpc.server/grpcServer/pb"
-	groupPb "demo.golang.grpc.server/grpcServer/pb/group"
+	"demo.golang.grpc.server/grpcWeb/pb"
+	"fmt"
+	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 	"log"
 	"net"
+	"net/http"
 )
 
 type runnerServer struct {
 }
 
-func (s *runnerServer) Run(ctx context.Context, request *runnerPb.RunnerRequest) (*runnerPb.RunnerResponse, error) {
+func (s *runnerServer) Run(ctx context.Context, request *pb.RunnerRequest) (*pb.RunnerResponse, error) {
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		log.Println(md)
 		if value, ok := md["key"]; ok {
 			log.Println(value)
 		}
 	}
-	return &runnerPb.RunnerResponse{Message: "Run:[" + request.Name + "]"}, nil
-}
-
-type groupServer struct {
-}
-
-func (s *groupServer) Do(ctx context.Context, request *groupPb.GroupRequest) (*groupPb.GroupResponse, error) {
-	return &groupPb.GroupResponse{Message: "Do:[" + request.Name + "]"}, nil
+	return &pb.RunnerResponse{Message: "Run:[" + request.Name + "]"}, nil
 }
 
 // "cert.pem"
@@ -54,9 +49,26 @@ func main() {
 	// Create a gRPC server object
 	//grpcServer := grpc.NewServer()
 	grpcServer := grpc.NewServer(grpc.Creds(transportCredentials))
-	runnerPb.RegisterRunnerServer(grpcServer, &runnerServer{})
-	groupPb.RegisterGroupServer(grpcServer, &groupServer{})
+	pb.RegisterRunnerServer(grpcServer, &runnerServer{})
 	// Serve gRPC server
 	log.Println("Serving gRPC")
-	log.Fatalln(grpcServer.Serve(listen))
+	go func() {
+		log.Fatalf("failed to serve: %v", grpcServer.Serve(listen))
+	}()
+
+	// gRPC web code
+	grpcWebServer := grpcweb.WrapServer(
+		grpcServer,
+		// Enable CORS
+		grpcweb.WithOriginFunc(func(origin string) bool { return true }),
+	)
+
+	webServer := &http.Server{
+		Handler: grpcWebServer,
+		Addr:    fmt.Sprintf("localhost:%d", 8090),
+	}
+
+	log.Println("Serving gRPC-Web")
+	//log.Fatalln(gatewayServer.ListenAndServe())
+	log.Fatalln(webServer.ListenAndServeTLS(certFile, keyFile))
 }
