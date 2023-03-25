@@ -19,7 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Runner_Run_FullMethodName = "/runner.Runner/Run"
+	Runner_Run_FullMethodName                    = "/runner.Runner/Run"
+	Runner_ServerStreaming_FullMethodName        = "/runner.Runner/ServerStreaming"
+	Runner_ClientStreaming_FullMethodName        = "/runner.Runner/ClientStreaming"
+	Runner_BidirectionalStreaming_FullMethodName = "/runner.Runner/BidirectionalStreaming"
 )
 
 // RunnerClient is the client API for Runner service.
@@ -27,6 +30,9 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type RunnerClient interface {
 	Run(ctx context.Context, in *RunnerRequest, opts ...grpc.CallOption) (*RunnerResponse, error)
+	ServerStreaming(ctx context.Context, in *RunnerRequest, opts ...grpc.CallOption) (Runner_ServerStreamingClient, error)
+	ClientStreaming(ctx context.Context, opts ...grpc.CallOption) (Runner_ClientStreamingClient, error)
+	BidirectionalStreaming(ctx context.Context, opts ...grpc.CallOption) (Runner_BidirectionalStreamingClient, error)
 }
 
 type runnerClient struct {
@@ -46,11 +52,111 @@ func (c *runnerClient) Run(ctx context.Context, in *RunnerRequest, opts ...grpc.
 	return out, nil
 }
 
+func (c *runnerClient) ServerStreaming(ctx context.Context, in *RunnerRequest, opts ...grpc.CallOption) (Runner_ServerStreamingClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Runner_ServiceDesc.Streams[0], Runner_ServerStreaming_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &runnerServerStreamingClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Runner_ServerStreamingClient interface {
+	Recv() (*RunnerResponse, error)
+	grpc.ClientStream
+}
+
+type runnerServerStreamingClient struct {
+	grpc.ClientStream
+}
+
+func (x *runnerServerStreamingClient) Recv() (*RunnerResponse, error) {
+	m := new(RunnerResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *runnerClient) ClientStreaming(ctx context.Context, opts ...grpc.CallOption) (Runner_ClientStreamingClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Runner_ServiceDesc.Streams[1], Runner_ClientStreaming_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &runnerClientStreamingClient{stream}
+	return x, nil
+}
+
+type Runner_ClientStreamingClient interface {
+	Send(*RunnerRequest) error
+	CloseAndRecv() (*RunnerResponse, error)
+	grpc.ClientStream
+}
+
+type runnerClientStreamingClient struct {
+	grpc.ClientStream
+}
+
+func (x *runnerClientStreamingClient) Send(m *RunnerRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *runnerClientStreamingClient) CloseAndRecv() (*RunnerResponse, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(RunnerResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *runnerClient) BidirectionalStreaming(ctx context.Context, opts ...grpc.CallOption) (Runner_BidirectionalStreamingClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Runner_ServiceDesc.Streams[2], Runner_BidirectionalStreaming_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &runnerBidirectionalStreamingClient{stream}
+	return x, nil
+}
+
+type Runner_BidirectionalStreamingClient interface {
+	Send(*RunnerRequest) error
+	Recv() (*RunnerResponse, error)
+	grpc.ClientStream
+}
+
+type runnerBidirectionalStreamingClient struct {
+	grpc.ClientStream
+}
+
+func (x *runnerBidirectionalStreamingClient) Send(m *RunnerRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *runnerBidirectionalStreamingClient) Recv() (*RunnerResponse, error) {
+	m := new(RunnerResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // RunnerServer is the server API for Runner service.
 // All implementations should embed UnimplementedRunnerServer
 // for forward compatibility
 type RunnerServer interface {
 	Run(context.Context, *RunnerRequest) (*RunnerResponse, error)
+	ServerStreaming(*RunnerRequest, Runner_ServerStreamingServer) error
+	ClientStreaming(Runner_ClientStreamingServer) error
+	BidirectionalStreaming(Runner_BidirectionalStreamingServer) error
 }
 
 // UnimplementedRunnerServer should be embedded to have forward compatible implementations.
@@ -59,6 +165,15 @@ type UnimplementedRunnerServer struct {
 
 func (UnimplementedRunnerServer) Run(context.Context, *RunnerRequest) (*RunnerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Run not implemented")
+}
+func (UnimplementedRunnerServer) ServerStreaming(*RunnerRequest, Runner_ServerStreamingServer) error {
+	return status.Errorf(codes.Unimplemented, "method ServerStreaming not implemented")
+}
+func (UnimplementedRunnerServer) ClientStreaming(Runner_ClientStreamingServer) error {
+	return status.Errorf(codes.Unimplemented, "method ClientStreaming not implemented")
+}
+func (UnimplementedRunnerServer) BidirectionalStreaming(Runner_BidirectionalStreamingServer) error {
+	return status.Errorf(codes.Unimplemented, "method BidirectionalStreaming not implemented")
 }
 
 // UnsafeRunnerServer may be embedded to opt out of forward compatibility for this service.
@@ -90,6 +205,79 @@ func _Runner_Run_Handler(srv interface{}, ctx context.Context, dec func(interfac
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Runner_ServerStreaming_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(RunnerRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(RunnerServer).ServerStreaming(m, &runnerServerStreamingServer{stream})
+}
+
+type Runner_ServerStreamingServer interface {
+	Send(*RunnerResponse) error
+	grpc.ServerStream
+}
+
+type runnerServerStreamingServer struct {
+	grpc.ServerStream
+}
+
+func (x *runnerServerStreamingServer) Send(m *RunnerResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _Runner_ClientStreaming_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(RunnerServer).ClientStreaming(&runnerClientStreamingServer{stream})
+}
+
+type Runner_ClientStreamingServer interface {
+	SendAndClose(*RunnerResponse) error
+	Recv() (*RunnerRequest, error)
+	grpc.ServerStream
+}
+
+type runnerClientStreamingServer struct {
+	grpc.ServerStream
+}
+
+func (x *runnerClientStreamingServer) SendAndClose(m *RunnerResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *runnerClientStreamingServer) Recv() (*RunnerRequest, error) {
+	m := new(RunnerRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _Runner_BidirectionalStreaming_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(RunnerServer).BidirectionalStreaming(&runnerBidirectionalStreamingServer{stream})
+}
+
+type Runner_BidirectionalStreamingServer interface {
+	Send(*RunnerResponse) error
+	Recv() (*RunnerRequest, error)
+	grpc.ServerStream
+}
+
+type runnerBidirectionalStreamingServer struct {
+	grpc.ServerStream
+}
+
+func (x *runnerBidirectionalStreamingServer) Send(m *RunnerResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *runnerBidirectionalStreamingServer) Recv() (*RunnerRequest, error) {
+	m := new(RunnerRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // Runner_ServiceDesc is the grpc.ServiceDesc for Runner service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -102,6 +290,23 @@ var Runner_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Runner_Run_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "ServerStreaming",
+			Handler:       _Runner_ServerStreaming_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "ClientStreaming",
+			Handler:       _Runner_ClientStreaming_Handler,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "BidirectionalStreaming",
+			Handler:       _Runner_BidirectionalStreaming_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
 	Metadata: "runner.proto",
 }

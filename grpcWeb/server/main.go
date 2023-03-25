@@ -67,7 +67,6 @@ func main() {
 		Handler: grpcWebServer,
 		Addr:    fmt.Sprintf("localhost:%d", 8090),
 	}
-
 	log.Println("Serving gRPC-Web")
 	//log.Fatalln(gatewayServer.ListenAndServe())
 	log.Fatalln(webServer.ListenAndServeTLS(certFile, keyFile))

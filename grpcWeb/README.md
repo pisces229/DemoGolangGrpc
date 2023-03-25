@@ -21,7 +21,7 @@ protoc `
 runner.proto
 ```
 
-[gRPC-Web in browser](https://static.kancloud.cn/cyyspring/webpack/3091261)
+[gRPC for Web Clients](https://github.com/grpc/grpc-web)
 
 `npm i grpc-web`
 

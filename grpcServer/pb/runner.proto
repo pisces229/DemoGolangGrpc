@@ -4,10 +4,13 @@ package runner;
 
 service Runner {
   rpc Run (RunnerRequest) returns (RunnerResponse) {}
+  rpc ServerStreaming (RunnerRequest) returns (stream RunnerResponse) {}
+  rpc ClientStreaming (stream RunnerRequest) returns (RunnerResponse) {}
+  rpc BidirectionalStreaming (stream RunnerRequest) returns (stream RunnerResponse) {}
 }
 
 message RunnerRequest {
-  string name = 1;
+  string message = 1;
 }
 
 message RunnerResponse {

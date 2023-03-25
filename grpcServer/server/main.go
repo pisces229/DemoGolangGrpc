@@ -4,11 +4,14 @@ import (
 	"context"
 	runnerPb "demo.golang.grpc.server/grpcServer/pb"
 	groupPb "demo.golang.grpc.server/grpcServer/pb/group"
+	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
+	"io"
 	"log"
 	"net"
+	"time"
 )
 
 type runnerServer struct {
@@ -21,7 +24,74 @@ func (s *runnerServer) Run(ctx context.Context, request *runnerPb.RunnerRequest)
 			log.Println(value)
 		}
 	}
-	return &runnerPb.RunnerResponse{Message: "Run:[" + request.Name + "]"}, nil
+	return &runnerPb.RunnerResponse{Message: "Run:[" + request.Message + "]"}, nil
+}
+
+func (s *runnerServer) ServerStreaming(request *runnerPb.RunnerRequest, responseStream runnerPb.Runner_ServerStreamingServer) error {
+	var error error
+	log.Println(request.Message)
+	values := []string{"First", "Second", "Third"}
+	for _, value := range values {
+		result := &runnerPb.RunnerResponse{Message: value}
+		if err := responseStream.Send(result); err != nil {
+			log.Println("failed to Send:", err)
+			error = err
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+	return error
+}
+
+func (s *runnerServer) ClientStreaming(requestStream runnerPb.Runner_ClientStreamingServer) error {
+	var error error
+	for {
+		request, err := requestStream.Recv()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			log.Println("failed to Recv:", err)
+			error = err
+			break
+		}
+		log.Println(request.Message)
+	}
+	if err := requestStream.SendAndClose(&runnerPb.RunnerResponse{Message: "ok"}); err != nil {
+		log.Println("failed to SendAndClose:", err)
+		error = err
+	}
+	return error
+}
+
+func (s *runnerServer) BidirectionalStreaming(stream runnerPb.Runner_BidirectionalStreamingServer) error {
+	var error error
+	doneChan := make(chan string)
+	go func() {
+		for {
+			request, err := stream.Recv()
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				log.Println("failed to Recv:", err)
+				error = err
+				break
+			}
+			log.Printf(request.Message)
+		}
+		doneChan <- "Request Done"
+	}()
+	go func() {
+		values := []string{"First", "Second", "Third"}
+		for _, value := range values {
+			stream.Send(&runnerPb.RunnerResponse{Message: value})
+			time.Sleep(1 * time.Second)
+		}
+		doneChan <- "Response Done"
+	}()
+	fmt.Println(<-doneChan)
+	fmt.Println(<-doneChan)
+	fmt.Println("Done")
+	return error
 }
 
 type groupServer struct {
